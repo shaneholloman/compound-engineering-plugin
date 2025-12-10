@@ -6,19 +6,20 @@ AI-powered development tools that get smarter with every use. Make each unit of 
 
 | Component | Count |
 |-----------|-------|
-| Agents | 24 |
+| Agents | 25 |
 | Commands | 19 |
-| Skills | 11 |
+| Skills | 12 |
 | MCP Servers | 2 |
 
 ## Agents
 
 Agents are organized into categories for easier discovery.
 
-### Review (11)
+### Review (12)
 
 | Agent | Description |
 |-------|-------------|
+| `agent-native-reviewer` | Verify features are agent-native (action + context parity) |
 | `architecture-strategist` | Analyze architectural decisions and compliance |
 | `code-simplicity-reviewer` | Final pass for simplicity and minimalism |
 | `data-integrity-guardian` | Database migrations and data integrity |
@@ -95,6 +96,12 @@ Core workflow commands (use the short form for autocomplete):
 | `/triage` | Triage and prioritize issues |
 
 ## Skills
+
+### Architecture & Design
+
+| Skill | Description |
+|-------|-------------|
+| `agent-native-architecture` | Build AI agents using prompt-native architecture |
 
 ### Development Tools
 
