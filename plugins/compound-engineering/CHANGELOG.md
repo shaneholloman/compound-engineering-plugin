@@ -5,6 +5,67 @@ All notable changes to the compound-engineering plugin will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.37.1] - 2026-03-01
+
+### Fixed
+
+- **`/workflows:review` rendering** — Fixed broken markdown output: "Next Steps" items 3 & 4 and Severity Breakdown no longer leak outside the Summary Report template, section numbering fixed (was jumping 5→7, now correct), removed orphaned fenced code block delimiters that caused the entire End-to-End Testing section to render as a code block, and fixed unclosed quoted string in section 1. ([#214](https://github.com/EveryInc/compound-engineering-plugin/pull/214)) — thanks [@XSAM](https://github.com/XSAM)!
+- **`.worktrees` gitignore** — Added `.worktrees/` to `.gitignore` to prevent worktree directories created by the `git-worktree` skill from being tracked. ([#213](https://github.com/EveryInc/compound-engineering-plugin/pull/213)) — thanks [@XSAM](https://github.com/XSAM)!
+
+---
+
+## [2.37.0] - 2026-03-01
+
+### Added
+
+- **`proof` skill** — Create, edit, comment on, and share markdown documents via Proof's web API and local bridge. Supports document creation, track-changes suggestions, comments, and bulk rewrites. No authentication required for creating shared documents.
+- **Optional Proof sharing in `/workflows:brainstorm`** — "Share to Proof" is now a menu option in Phase 4 handoff, letting you upload the brainstorm document when you want to, rather than automatically on every run.
+- **Optional Proof sharing in `/workflows:plan`** — "Share to Proof" is now a menu option in Post-Generation Options, letting you upload the plan file on demand rather than automatically.
+
+---
+
+## [2.36.0] - 2026-03-01
+
+### Added
+
+- **OpenClaw install target** — `bunx @every-env/compound-plugin install compound-engineering --to openclaw` now installs the plugin to OpenClaw's extensions directory. ([#217](https://github.com/EveryInc/compound-engineering-plugin/pull/217)) — thanks [@TrendpilotAI](https://github.com/TrendpilotAI)!
+- **Qwen Code install target** — `bunx @every-env/compound-plugin install compound-engineering --to qwen` now installs the plugin to Qwen Code's extensions directory. ([#220](https://github.com/EveryInc/compound-engineering-plugin/pull/220)) — thanks [@rlam3](https://github.com/rlam3)!
+- **Windsurf install target** — `bunx @every-env/compound-plugin install compound-engineering --to windsurf` converts plugins to Windsurf format. Agents become Windsurf skills, commands become flat workflows, and MCP servers write to `mcp_config.json`. Defaults to global scope (`~/.codeium/windsurf/`); use `--scope workspace` for project-level output. ([#202](https://github.com/EveryInc/compound-engineering-plugin/pull/202)) — thanks [@rburnham52](https://github.com/rburnham52)!
+
+### Fixed
+
+- **`create-agent-skill` / `heal-skill` YAML crash** — `argument-hint` values containing special characters now properly quoted to prevent YAML parse errors in the Claude Code TUI. ([#219](https://github.com/EveryInc/compound-engineering-plugin/pull/219)) — thanks [@solon](https://github.com/solon)!
+- **`resolve-pr-parallel` skill name** — Renamed from `resolve_pr_parallel` (underscore) to `resolve-pr-parallel` (hyphen) to match the standard naming convention. ([#202](https://github.com/EveryInc/compound-engineering-plugin/pull/202)) — thanks [@rburnham52](https://github.com/rburnham52)!
+
+---
+
+## [2.35.2] - 2026-02-20
+
+### Changed
+
+- **`/workflows:plan` brainstorm integration** — When plan finds a brainstorm document, it now heavily references it throughout. Added `origin:` frontmatter field to plan templates, brainstorm cross-check in final review, and "Sources" section at the bottom of all three plan templates (MINIMAL, MORE, A LOT). Brainstorm decisions are carried forward with explicit references (`see brainstorm: <path>`) and a mandatory scan before finalizing ensures nothing is dropped.
+
+---
+
+## [2.35.1] - 2026-02-18
+
+### Changed
+
+- **`/workflows:work` system-wide test check** — Added "System-Wide Test Check" to the task execution loop. Before marking a task done, forces five questions: what callbacks/middleware fire when this runs? Do tests exercise the real chain or just mocked isolation? Can failure leave orphaned state? What other interfaces need the same change? Do error strategies align across layers? Includes skip criteria for leaf-node changes. Also added integration test guidance to the "Test Continuously" section.
+- **`/workflows:plan` system-wide impact templates** — Added "System-Wide Impact" section to MORE and A LOT plan templates (interaction graph, error propagation, state lifecycle, API surface parity, integration test scenarios) as lightweight prompts to flag risks during planning.
+
+---
+
+## [2.35.0] - 2026-02-17
+
+### Fixed
+
+- **`/lfg` and `/slfg` first-run failures** — Made ralph-loop step optional with graceful fallback when `ralph-wiggum` skill is not installed (#154). Added explicit "do not stop" instruction across all steps (#134).
+- **`/workflows:plan` not writing file in pipeline** — Added mandatory "Write Plan File" step with explicit Write tool instructions before Post-Generation Options. The file is now always written to disk before any interactive prompts (#155). Also adds pipeline-mode note to skip AskUserQuestion calls when invoked from LFG/SLFG (#134).
+- **Agent namespace typo in `/workflows:plan`** — `Task spec-flow-analyzer(...)` now uses the full qualified name `Task compound-engineering:workflow:spec-flow-analyzer(...)` to prevent Claude from prepending the wrong `workflows:` prefix (#193).
+
+---
+
 ## [2.34.0] - 2026-02-14
 
 ### Added
@@ -73,7 +134,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All 29 agent descriptions trimmed from ~1,400 to ~180 chars avg (examples moved to agent body)
   - 18 manual commands marked `disable-model-invocation: true` (side-effect commands like `/lfg`, `/deploy-docs`, `/triage`, etc.)
   - 6 manual skills marked `disable-model-invocation: true` (`orchestrating-swarms`, `git-worktree`, `skill-creator`, `compound-docs`, `file-todos`, `resolve-pr-parallel`)
-- **git-worktree**: Remove confirmation prompt for worktree creation ([@Sam Xie](https://github.com/samxie))
+- **git-worktree**: Remove confirmation prompt for worktree creation ([@Sam Xie](https://github.com/XSAM))
 - **Prevent subagents from writing intermediary files** in compound workflow ([@Trevin Chow](https://github.com/trevin))
 
 ### Fixed

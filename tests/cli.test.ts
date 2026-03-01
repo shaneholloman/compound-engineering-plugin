@@ -426,4 +426,82 @@ describe("CLI", () => {
     expect(await exists(path.join(piRoot, "prompts", "workflows-review.md"))).toBe(true)
     expect(await exists(path.join(piRoot, "extensions", "compound-engineering-compat.ts"))).toBe(true)
   })
+
+  test("install --to opencode uses permissions:none by default", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "cli-perms-none-"))
+    const fixtureRoot = path.join(import.meta.dir, "fixtures", "sample-plugin")
+
+    const proc = Bun.spawn([
+      "bun",
+      "run",
+      "src/index.ts",
+      "install",
+      fixtureRoot,
+      "--to",
+      "opencode",
+      "--output",
+      tempRoot,
+    ], {
+      cwd: path.join(import.meta.dir, ".."),
+      stdout: "pipe",
+      stderr: "pipe",
+    })
+
+    const exitCode = await proc.exited
+    const stdout = await new Response(proc.stdout).text()
+    const stderr = await new Response(proc.stderr).text()
+
+    if (exitCode !== 0) {
+      throw new Error(`CLI failed (exit ${exitCode}).\nstdout: ${stdout}\nstderr: ${stderr}`)
+    }
+
+    expect(stdout).toContain("Installed compound-engineering")
+
+    const opencodeJsonPath = path.join(tempRoot, "opencode.json")
+    const content = await fs.readFile(opencodeJsonPath, "utf-8")
+    const json = JSON.parse(content)
+
+    expect(json).not.toHaveProperty("permission")
+    expect(json).not.toHaveProperty("tools")
+  })
+
+  test("install --to opencode --permissions broad writes permission block", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "cli-perms-broad-"))
+    const fixtureRoot = path.join(import.meta.dir, "fixtures", "sample-plugin")
+
+    const proc = Bun.spawn([
+      "bun",
+      "run",
+      "src/index.ts",
+      "install",
+      fixtureRoot,
+      "--to",
+      "opencode",
+      "--permissions",
+      "broad",
+      "--output",
+      tempRoot,
+    ], {
+      cwd: path.join(import.meta.dir, ".."),
+      stdout: "pipe",
+      stderr: "pipe",
+    })
+
+    const exitCode = await proc.exited
+    const stdout = await new Response(proc.stdout).text()
+    const stderr = await new Response(proc.stderr).text()
+
+    if (exitCode !== 0) {
+      throw new Error(`CLI failed (exit ${exitCode}).\nstdout: ${stdout}\nstderr: ${stderr}`)
+    }
+
+    expect(stdout).toContain("Installed compound-engineering")
+
+    const opencodeJsonPath = path.join(tempRoot, "opencode.json")
+    const content = await fs.readFile(opencodeJsonPath, "utf-8")
+    const json = JSON.parse(content)
+
+    expect(json).toHaveProperty("permission")
+    expect(json.permission).not.toBeNull()
+  })
 })

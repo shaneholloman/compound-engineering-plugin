@@ -5,11 +5,11 @@ argument-hint: "[feature description]"
 disable-model-invocation: true
 ---
 
-Swarm-enabled LFG. Run these steps in order, parallelizing where indicated.
+Swarm-enabled LFG. Run these steps in order, parallelizing where indicated. Do not stop between steps — complete every step through to the end.
 
 ## Sequential Phase
 
-1. `/ralph-wiggum:ralph-loop "finish all slash commands" --completion-promise "DONE"`
+1. **Optional:** If the `ralph-wiggum` skill is available, run `/ralph-wiggum:ralph-loop "finish all slash commands" --completion-promise "DONE"`. If not available or it fails, skip and continue to step 2 immediately.
 2. `/workflows:plan $ARGUMENTS`
 3. `/compound-engineering:deepen-plan`
 4. `/workflows:work` — **Use swarm mode**: Make a Task list and launch an army of agent swarm subagents to build the plan

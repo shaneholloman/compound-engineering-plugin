@@ -89,8 +89,24 @@ Use **AskUserQuestion tool** to present next steps:
 **Options:**
 1. **Review and refine** - Improve the document through structured self-review
 2. **Proceed to planning** - Run `/workflows:plan` (will auto-detect this brainstorm)
-3. **Ask more questions** - I have more questions to clarify before moving on
-4. **Done for now** - Return later
+3. **Share to Proof** - Upload to Proof for collaborative review and sharing
+4. **Ask more questions** - I have more questions to clarify before moving on
+5. **Done for now** - Return later
+
+**If user selects "Share to Proof":**
+
+```bash
+CONTENT=$(cat docs/brainstorms/YYYY-MM-DD-<topic>-brainstorm.md)
+TITLE="Brainstorm: <topic title>"
+RESPONSE=$(curl -s -X POST https://www.proofeditor.ai/share/markdown \
+  -H "Content-Type: application/json" \
+  -d "$(jq -n --arg title "$TITLE" --arg markdown "$CONTENT" --arg by "ai:compound" '{title: $title, markdown: $markdown, by: $by}')")
+PROOF_URL=$(echo "$RESPONSE" | jq -r '.tokenUrl')
+```
+
+Display the URL prominently: `View & collaborate in Proof: <PROOF_URL>`
+
+If the curl fails, skip silently. Then return to the Phase 4 options.
 
 **If user selects "Ask more questions":** YOU (Claude) return to Phase 1.2 (Collaborative Dialogue) and continue asking the USER questions one at a time to further refine the design. The user wants YOU to probe deeper - ask about edge cases, constraints, preferences, or areas not yet explored. Continue until the user is satisfied, then return to Phase 4.
 

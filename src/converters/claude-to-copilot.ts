@@ -1,43 +1,63 @@
 import { formatFrontmatter } from "../utils/frontmatter"
 import type { ClaudeAgent, ClaudeCommand, ClaudeMcpServer, ClaudePlugin } from "../types/claude"
-import type { CursorBundle, CursorCommand, CursorMcpServer, CursorRule } from "../types/cursor"
+import type {
+  CopilotAgent,
+  CopilotBundle,
+  CopilotGeneratedSkill,
+  CopilotMcpServer,
+} from "../types/copilot"
 import type { ClaudeToOpenCodeOptions } from "./claude-to-opencode"
 
-export type ClaudeToCursorOptions = ClaudeToOpenCodeOptions
+export type ClaudeToCopilotOptions = ClaudeToOpenCodeOptions
 
-export function convertClaudeToCursor(
+const COPILOT_BODY_CHAR_LIMIT = 30_000
+
+export function convertClaudeToCopilot(
   plugin: ClaudePlugin,
-  _options: ClaudeToCursorOptions,
-): CursorBundle {
-  const usedRuleNames = new Set<string>()
-  const usedCommandNames = new Set<string>()
+  _options: ClaudeToCopilotOptions,
+): CopilotBundle {
+  const usedAgentNames = new Set<string>()
+  const usedSkillNames = new Set<string>()
 
-  const rules = plugin.agents.map((agent) => convertAgentToRule(agent, usedRuleNames))
-  const commands = plugin.commands.map((command) => convertCommand(command, usedCommandNames))
-  const skillDirs = plugin.skills.map((skill) => ({
-    name: skill.name,
-    sourceDir: skill.sourceDir,
-  }))
+  const agents = plugin.agents.map((agent) => convertAgent(agent, usedAgentNames))
 
-  const mcpServers = convertMcpServers(plugin.mcpServers)
+  // Reserve skill names first so generated skills (from commands) don't collide
+  const skillDirs = plugin.skills.map((skill) => {
+    usedSkillNames.add(skill.name)
+    return {
+      name: skill.name,
+      sourceDir: skill.sourceDir,
+    }
+  })
+
+  const generatedSkills = plugin.commands.map((command) =>
+    convertCommandToSkill(command, usedSkillNames),
+  )
+
+  const mcpConfig = convertMcpServers(plugin.mcpServers)
 
   if (plugin.hooks && Object.keys(plugin.hooks.hooks).length > 0) {
-    console.warn("Warning: Cursor does not support hooks. Hooks were skipped during conversion.")
+    console.warn("Warning: Copilot does not support hooks. Hooks were skipped during conversion.")
   }
 
-  return { rules, commands, skillDirs, mcpServers }
+  return { agents, generatedSkills, skillDirs, mcpConfig }
 }
 
-function convertAgentToRule(agent: ClaudeAgent, usedNames: Set<string>): CursorRule {
+function convertAgent(agent: ClaudeAgent, usedNames: Set<string>): CopilotAgent {
   const name = uniqueName(normalizeName(agent.name), usedNames)
   const description = agent.description ?? `Converted from Claude agent ${agent.name}`
 
   const frontmatter: Record<string, unknown> = {
     description,
-    alwaysApply: false,
+    tools: ["*"],
+    infer: true,
   }
 
-  let body = transformContentForCursor(agent.body.trim())
+  if (agent.model) {
+    frontmatter.model = agent.model
+  }
+
+  let body = transformContentForCopilot(agent.body.trim())
   if (agent.capabilities && agent.capabilities.length > 0) {
     const capabilities = agent.capabilities.map((c) => `- ${c}`).join("\n")
     body = `## Capabilities\n${capabilities}\n\n${body}`.trim()
@@ -46,39 +66,44 @@ function convertAgentToRule(agent: ClaudeAgent, usedNames: Set<string>): CursorR
     body = `Instructions converted from the ${agent.name} agent.`
   }
 
+  if (body.length > COPILOT_BODY_CHAR_LIMIT) {
+    console.warn(
+      `Warning: Agent "${agent.name}" body exceeds ${COPILOT_BODY_CHAR_LIMIT} characters (${body.length}). Copilot may truncate it.`,
+    )
+  }
+
   const content = formatFrontmatter(frontmatter, body)
   return { name, content }
 }
 
-function convertCommand(command: ClaudeCommand, usedNames: Set<string>): CursorCommand {
+function convertCommandToSkill(
+  command: ClaudeCommand,
+  usedNames: Set<string>,
+): CopilotGeneratedSkill {
   const name = uniqueName(flattenCommandName(command.name), usedNames)
 
-  const sections: string[] = []
-
-  if (command.description) {
-    sections.push(`<!-- ${command.description} -->`)
+  const frontmatter: Record<string, unknown> = {
+    name,
   }
+  if (command.description) {
+    frontmatter.description = command.description
+  }
+
+  const sections: string[] = []
 
   if (command.argumentHint) {
     sections.push(`## Arguments\n${command.argumentHint}`)
   }
 
-  const transformedBody = transformContentForCursor(command.body.trim())
+  const transformedBody = transformContentForCopilot(command.body.trim())
   sections.push(transformedBody)
 
-  const content = sections.filter(Boolean).join("\n\n").trim()
+  const body = sections.filter(Boolean).join("\n\n").trim()
+  const content = formatFrontmatter(frontmatter, body)
   return { name, content }
 }
 
-/**
- * Transform Claude Code content to Cursor-compatible content.
- *
- * 1. Task agent calls: Task agent-name(args) -> Use the agent-name skill to: args
- * 2. Slash commands: /workflows:plan -> /plan (flatten namespace)
- * 3. Path rewriting: .claude/ -> .cursor/
- * 4. Agent references: @agent-name -> the agent-name rule
- */
-export function transformContentForCursor(body: string): string {
+export function transformContentForCopilot(body: string): string {
   let result = body
 
   // 1. Transform Task agent calls
@@ -88,24 +113,25 @@ export function transformContentForCursor(body: string): string {
     return `${prefix}Use the ${skillName} skill to: ${args.trim()}`
   })
 
-  // 2. Transform slash command references (flatten namespaces)
+  // 2. Transform slash command references (replace colons with hyphens)
   const slashCommandPattern = /(?<![:\w])\/([a-z][a-z0-9_:-]*?)(?=[\s,."')\]}`]|$)/gi
   result = result.replace(slashCommandPattern, (match, commandName: string) => {
     if (commandName.includes("/")) return match
     if (["dev", "tmp", "etc", "usr", "var", "bin", "home"].includes(commandName)) return match
-    const flattened = flattenCommandName(commandName)
-    return `/${flattened}`
+    const normalized = flattenCommandName(commandName)
+    return `/${normalized}`
   })
 
-  // 3. Rewrite .claude/ paths to .cursor/
+  // 3. Rewrite .claude/ paths to .github/ and ~/.claude/ to ~/.copilot/
   result = result
-    .replace(/~\/\.claude\//g, "~/.cursor/")
-    .replace(/\.claude\//g, ".cursor/")
+    .replace(/~\/\.claude\//g, "~/.copilot/")
+    .replace(/\.claude\//g, ".github/")
 
   // 4. Transform @agent-name references
-  const agentRefPattern = /@([a-z][a-z0-9-]*-(?:agent|reviewer|researcher|analyst|specialist|oracle|sentinel|guardian|strategist))/gi
+  const agentRefPattern =
+    /@([a-z][a-z0-9-]*-(?:agent|reviewer|researcher|analyst|specialist|oracle|sentinel|guardian|strategist))/gi
   result = result.replace(agentRefPattern, (_match, agentName: string) => {
-    return `the ${normalizeName(agentName)} rule`
+    return `the ${normalizeName(agentName)} agent`
   })
 
   return result
@@ -113,29 +139,47 @@ export function transformContentForCursor(body: string): string {
 
 function convertMcpServers(
   servers?: Record<string, ClaudeMcpServer>,
-): Record<string, CursorMcpServer> | undefined {
+): Record<string, CopilotMcpServer> | undefined {
   if (!servers || Object.keys(servers).length === 0) return undefined
 
-  const result: Record<string, CursorMcpServer> = {}
+  const result: Record<string, CopilotMcpServer> = {}
   for (const [name, server] of Object.entries(servers)) {
-    const entry: CursorMcpServer = {}
+    const entry: CopilotMcpServer = {
+      type: server.command ? "local" : "sse",
+      tools: ["*"],
+    }
+
     if (server.command) {
       entry.command = server.command
       if (server.args && server.args.length > 0) entry.args = server.args
-      if (server.env && Object.keys(server.env).length > 0) entry.env = server.env
     } else if (server.url) {
       entry.url = server.url
       if (server.headers && Object.keys(server.headers).length > 0) entry.headers = server.headers
     }
+
+    if (server.env && Object.keys(server.env).length > 0) {
+      entry.env = prefixEnvVars(server.env)
+    }
+
     result[name] = entry
   }
   return result
 }
 
+function prefixEnvVars(env: Record<string, string>): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const [key, value] of Object.entries(env)) {
+    if (key.startsWith("COPILOT_MCP_")) {
+      result[key] = value
+    } else {
+      result[`COPILOT_MCP_${key}`] = value
+    }
+  }
+  return result
+}
+
 function flattenCommandName(name: string): string {
-  const colonIndex = name.lastIndexOf(":")
-  const base = colonIndex >= 0 ? name.slice(colonIndex + 1) : name
-  return normalizeName(base)
+  return normalizeName(name)
 }
 
 function normalizeName(value: string): string {

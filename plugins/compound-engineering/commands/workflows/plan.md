@@ -36,11 +36,19 @@ ls -la docs/brainstorms/*.md 2>/dev/null | head -10
 - If multiple candidates match, use the most recent one
 
 **If a relevant brainstorm exists:**
-1. Read the brainstorm document
-2. Announce: "Found brainstorm from [date]: [topic]. Using as context for planning."
-3. Extract key decisions, chosen approach, and open questions
-4. **Skip the idea refinement questions below** - the brainstorm already answered WHAT to build
-5. Use brainstorm decisions as input to the research phase
+1. Read the brainstorm document **thoroughly** — every section matters
+2. Announce: "Found brainstorm from [date]: [topic]. Using as foundation for planning."
+3. Extract and carry forward **ALL** of the following into the plan:
+   - Key decisions and their rationale
+   - Chosen approach and why alternatives were rejected
+   - Constraints and requirements discovered during brainstorming
+   - Open questions (flag these for resolution during planning)
+   - Success criteria and scope boundaries
+   - Any specific technical choices or patterns discussed
+4. **Skip the idea refinement questions below** — the brainstorm already answered WHAT to build
+5. Use brainstorm content as the **primary input** to research and planning phases
+6. **Critical: The brainstorm is the origin document.** Throughout the plan, reference specific decisions with `(see brainstorm: docs/brainstorms/<filename>)` when carrying forward conclusions. Do not paraphrase decisions in a way that loses their original context — link back to the source.
+7. **Do not omit brainstorm content** — if the brainstorm discussed it, the plan must address it (even if briefly). Scan each brainstorm section before finalizing the plan to verify nothing was dropped.
 
 **If multiple brainstorms could match:**
 Use **AskUserQuestion tool** to ask which brainstorm to use, or whether to proceed without one.
@@ -150,7 +158,7 @@ Think like a product manager - what would make this issue clear and actionable? 
 
 After planning the issue structure, run SpecFlow Analyzer to validate and refine the feature specification:
 
-- Task spec-flow-analyzer(feature_description, research_findings)
+- Task compound-engineering:workflow:spec-flow-analyzer(feature_description, research_findings)
 
 **SpecFlow Analyzer Output:**
 
@@ -180,6 +188,7 @@ title: [Issue Title]
 type: [feat|fix|refactor]
 status: active
 date: YYYY-MM-DD
+origin: docs/brainstorms/YYYY-MM-DD-<topic>-brainstorm.md  # if originated from brainstorm, otherwise omit
 ---
 
 # [Issue Title]
@@ -207,8 +216,9 @@ class Test
 end
 ```
 
-## References
+## Sources
 
+- **Origin brainstorm:** [docs/brainstorms/YYYY-MM-DD-<topic>-brainstorm.md](path) — include if plan originated from a brainstorm
 - Related issue: #[issue_number]
 - Documentation: [relevant_docs_url]
 ````
@@ -233,6 +243,7 @@ title: [Issue Title]
 type: [feat|fix|refactor]
 status: active
 date: YYYY-MM-DD
+origin: docs/brainstorms/YYYY-MM-DD-<topic>-brainstorm.md  # if originated from brainstorm, otherwise omit
 ---
 
 # [Issue Title]
@@ -255,6 +266,14 @@ date: YYYY-MM-DD
 - Performance implications
 - Security considerations
 
+## System-Wide Impact
+
+- **Interaction graph**: [What callbacks/middleware/observers fire when this runs?]
+- **Error propagation**: [How do errors flow across layers? Do retry strategies align?]
+- **State lifecycle risks**: [Can partial failure leave orphaned/inconsistent state?]
+- **API surface parity**: [What other interfaces expose similar functionality and need the same change?]
+- **Integration test scenarios**: [Cross-layer scenarios that unit tests won't catch]
+
 ## Acceptance Criteria
 
 - [ ] Detailed requirement 1
@@ -269,8 +288,9 @@ date: YYYY-MM-DD
 
 [What could block or complicate this]
 
-## References & Research
+## Sources & References
 
+- **Origin brainstorm:** [docs/brainstorms/YYYY-MM-DD-<topic>-brainstorm.md](path) — include if plan originated from a brainstorm
 - Similar implementations: [file_path:line_number]
 - Best practices: [documentation_url]
 - Related PRs: #[pr_number]
@@ -298,6 +318,7 @@ title: [Issue Title]
 type: [feat|fix|refactor]
 status: active
 date: YYYY-MM-DD
+origin: docs/brainstorms/YYYY-MM-DD-<topic>-brainstorm.md  # if originated from brainstorm, otherwise omit
 ---
 
 # [Issue Title]
@@ -344,6 +365,28 @@ date: YYYY-MM-DD
 
 [Other solutions evaluated and why rejected]
 
+## System-Wide Impact
+
+### Interaction Graph
+
+[Map the chain reaction: what callbacks, middleware, observers, and event handlers fire when this code runs? Trace at least two levels deep. Document: "Action X triggers Y, which calls Z, which persists W."]
+
+### Error & Failure Propagation
+
+[Trace errors from lowest layer up. List specific error classes and where they're handled. Identify retry conflicts, unhandled error types, and silent failure swallowing.]
+
+### State Lifecycle Risks
+
+[Walk through each step that persists state. Can partial failure orphan rows, duplicate records, or leave caches stale? Document cleanup mechanisms or their absence.]
+
+### API Surface Parity
+
+[List all interfaces (classes, DSLs, endpoints) that expose equivalent functionality. Note which need updating and which share the code path.]
+
+### Integration Test Scenarios
+
+[3-5 cross-layer test scenarios that unit tests with mocks would never catch. Include expected behavior for each.]
+
 ## Acceptance Criteria
 
 ### Functional Requirements
@@ -386,7 +429,11 @@ date: YYYY-MM-DD
 
 [What docs need updating]
 
-## References & Research
+## Sources & References
+
+### Origin
+
+- **Brainstorm document:** [docs/brainstorms/YYYY-MM-DD-<topic>-brainstorm.md](path) — include if plan originated from a brainstorm. Key decisions carried forward: [list 2-3 major decisions from brainstorm]
 
 ### Internal References
 
@@ -465,6 +512,16 @@ end
 
 ### 6. Final Review & Submission
 
+**Brainstorm cross-check (if plan originated from a brainstorm):**
+
+Before finalizing, re-read the brainstorm document and verify:
+- [ ] Every key decision from the brainstorm is reflected in the plan
+- [ ] The chosen approach matches what was decided in the brainstorm
+- [ ] Constraints and requirements from the brainstorm are captured in acceptance criteria
+- [ ] Open questions from the brainstorm are either resolved or flagged
+- [ ] The `origin:` frontmatter field points to the brainstorm file
+- [ ] The Sources section includes the brainstorm with a summary of carried-forward decisions
+
 **Pre-submission Checklist:**
 
 - [ ] Title is searchable and descriptive
@@ -474,6 +531,20 @@ end
 - [ ] Acceptance criteria are measurable
 - [ ] Add names of files in pseudo code examples and todo lists
 - [ ] Add an ERD mermaid diagram if applicable for new model changes
+
+## Write Plan File
+
+**REQUIRED: Write the plan file to disk before presenting any options.**
+
+```bash
+mkdir -p docs/plans/
+```
+
+Use the Write tool to save the complete plan to `docs/plans/YYYY-MM-DD-<type>-<descriptive-name>-plan.md`. This step is mandatory and cannot be skipped — even when running as part of LFG/SLFG or other automated pipelines.
+
+Confirm: "Plan written to docs/plans/[filename]"
+
+**Pipeline mode:** If invoked from an automated workflow (LFG, SLFG, or any `disable-model-invocation` context), skip all AskUserQuestion calls. Make decisions automatically and proceed to writing the plan without interactive prompts.
 
 ## Output Format
 
@@ -503,15 +574,26 @@ After writing the plan file, use the **AskUserQuestion tool** to present these o
 2. **Run `/deepen-plan`** - Enhance each section with parallel research agents (best practices, performance, UI)
 3. **Run `/technical_review`** - Technical feedback from code-focused reviewers (DHH, Kieran, Simplicity)
 4. **Review and refine** - Improve the document through structured self-review
-5. **Start `/workflows:work`** - Begin implementing this plan locally
-6. **Start `/workflows:work` on remote** - Begin implementing in Claude Code on the web (use `&` to run in background)
-7. **Create Issue** - Create issue in project tracker (GitHub/Linear)
+5. **Share to Proof** - Upload to Proof for collaborative review and sharing
+6. **Start `/workflows:work`** - Begin implementing this plan locally
+7. **Start `/workflows:work` on remote** - Begin implementing in Claude Code on the web (use `&` to run in background)
+8. **Create Issue** - Create issue in project tracker (GitHub/Linear)
 
 Based on selection:
 - **Open plan in editor** → Run `open docs/plans/<plan_filename>.md` to open the file in the user's default editor
 - **`/deepen-plan`** → Call the /deepen-plan command with the plan file path to enhance with research
 - **`/technical_review`** → Call the /technical_review command with the plan file path
 - **Review and refine** → Load `document-review` skill.
+- **Share to Proof** → Upload the plan to Proof:
+  ```bash
+  CONTENT=$(cat docs/plans/<plan_filename>.md)
+  TITLE="Plan: <plan title from frontmatter>"
+  RESPONSE=$(curl -s -X POST https://www.proofeditor.ai/share/markdown \
+    -H "Content-Type: application/json" \
+    -d "$(jq -n --arg title "$TITLE" --arg markdown "$CONTENT" --arg by "ai:compound" '{title: $title, markdown: $markdown, by: $by}')")
+  PROOF_URL=$(echo "$RESPONSE" | jq -r '.tokenUrl')
+  ```
+  Display: `View & collaborate in Proof: <PROOF_URL>` — skip silently if curl fails. Then return to options.
 - **`/workflows:work`** → Call the /workflows:work command with the plan file path
 - **`/workflows:work` on remote** → Run `/workflows:work docs/plans/<plan_filename>.md &` to start work in background for Claude Code web
 - **Create Issue** → See "Issue Creation" section below

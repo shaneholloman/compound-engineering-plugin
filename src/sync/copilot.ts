@@ -4,19 +4,21 @@ import type { ClaudeHomeConfig } from "../parsers/claude-home"
 import type { ClaudeMcpServer } from "../types/claude"
 import { forceSymlink, isValidSkillName } from "../utils/symlink"
 
-type CursorMcpServer = {
+type CopilotMcpServer = {
+  type: string
   command?: string
   args?: string[]
   url?: string
+  tools: string[]
   env?: Record<string, string>
   headers?: Record<string, string>
 }
 
-type CursorMcpConfig = {
-  mcpServers: Record<string, CursorMcpServer>
+type CopilotMcpConfig = {
+  mcpServers: Record<string, CopilotMcpServer>
 }
 
-export async function syncToCursor(
+export async function syncToCopilot(
   config: ClaudeHomeConfig,
   outputRoot: string,
 ): Promise<void> {
@@ -33,10 +35,10 @@ export async function syncToCursor(
   }
 
   if (Object.keys(config.mcpServers).length > 0) {
-    const mcpPath = path.join(outputRoot, "mcp.json")
+    const mcpPath = path.join(outputRoot, "copilot-mcp-config.json")
     const existing = await readJsonSafe(mcpPath)
-    const converted = convertMcpForCursor(config.mcpServers)
-    const merged: CursorMcpConfig = {
+    const converted = convertMcpForCopilot(config.mcpServers)
+    const merged: CopilotMcpConfig = {
       mcpServers: {
         ...(existing.mcpServers ?? {}),
         ...converted,
@@ -46,10 +48,10 @@ export async function syncToCursor(
   }
 }
 
-async function readJsonSafe(filePath: string): Promise<Partial<CursorMcpConfig>> {
+async function readJsonSafe(filePath: string): Promise<Partial<CopilotMcpConfig>> {
   try {
     const content = await fs.readFile(filePath, "utf-8")
-    return JSON.parse(content) as Partial<CursorMcpConfig>
+    return JSON.parse(content) as Partial<CopilotMcpConfig>
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       return {}
@@ -58,21 +60,41 @@ async function readJsonSafe(filePath: string): Promise<Partial<CursorMcpConfig>>
   }
 }
 
-function convertMcpForCursor(
+function convertMcpForCopilot(
   servers: Record<string, ClaudeMcpServer>,
-): Record<string, CursorMcpServer> {
-  const result: Record<string, CursorMcpServer> = {}
+): Record<string, CopilotMcpServer> {
+  const result: Record<string, CopilotMcpServer> = {}
   for (const [name, server] of Object.entries(servers)) {
-    const entry: CursorMcpServer = {}
+    const entry: CopilotMcpServer = {
+      type: server.command ? "local" : "sse",
+      tools: ["*"],
+    }
+
     if (server.command) {
       entry.command = server.command
       if (server.args && server.args.length > 0) entry.args = server.args
-      if (server.env && Object.keys(server.env).length > 0) entry.env = server.env
     } else if (server.url) {
       entry.url = server.url
       if (server.headers && Object.keys(server.headers).length > 0) entry.headers = server.headers
     }
+
+    if (server.env && Object.keys(server.env).length > 0) {
+      entry.env = prefixEnvVars(server.env)
+    }
+
     result[name] = entry
+  }
+  return result
+}
+
+function prefixEnvVars(env: Record<string, string>): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const [key, value] of Object.entries(env)) {
+    if (key.startsWith("COPILOT_MCP_")) {
+      result[key] = value
+    } else {
+      result[`COPILOT_MCP_${key}`] = value
+    }
   }
   return result
 }

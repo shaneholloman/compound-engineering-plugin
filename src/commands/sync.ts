@@ -6,30 +6,17 @@ import { syncToOpenCode } from "../sync/opencode"
 import { syncToCodex } from "../sync/codex"
 import { syncToPi } from "../sync/pi"
 import { syncToDroid } from "../sync/droid"
-import { syncToCursor } from "../sync/cursor"
+import { syncToCopilot } from "../sync/copilot"
 import { syncToGemini } from "../sync/gemini"
 import { expandHome } from "../utils/resolve-home"
+import { hasPotentialSecrets } from "../utils/secrets"
 import { detectInstalledTools } from "../utils/detect-tools"
 
-const validTargets = ["opencode", "codex", "pi", "droid", "cursor", "gemini", "all"] as const
+const validTargets = ["opencode", "codex", "pi", "droid", "copilot", "gemini", "all"] as const
 type SyncTarget = (typeof validTargets)[number]
 
 function isValidTarget(value: string): value is SyncTarget {
   return (validTargets as readonly string[]).includes(value)
-}
-
-/** Check if any MCP servers have env vars that might contain secrets */
-function hasPotentialSecrets(mcpServers: Record<string, unknown>): boolean {
-  const sensitivePatterns = /key|token|secret|password|credential|api_key/i
-  for (const server of Object.values(mcpServers)) {
-    const env = (server as { env?: Record<string, string> }).env
-    if (env) {
-      for (const key of Object.keys(env)) {
-        if (sensitivePatterns.test(key)) return true
-      }
-    }
-  }
-  return false
 }
 
 function resolveOutputRoot(target: string): string {
@@ -42,8 +29,8 @@ function resolveOutputRoot(target: string): string {
       return path.join(os.homedir(), ".pi", "agent")
     case "droid":
       return path.join(os.homedir(), ".factory")
-    case "cursor":
-      return path.join(process.cwd(), ".cursor")
+    case "copilot":
+      return path.join(process.cwd(), ".github")
     case "gemini":
       return path.join(process.cwd(), ".gemini")
     default:
@@ -65,8 +52,8 @@ async function syncTarget(target: string, config: Awaited<ReturnType<typeof load
     case "droid":
       await syncToDroid(config, outputRoot)
       break
-    case "cursor":
-      await syncToCursor(config, outputRoot)
+    case "copilot":
+      await syncToCopilot(config, outputRoot)
       break
     case "gemini":
       await syncToGemini(config, outputRoot)
@@ -77,13 +64,13 @@ async function syncTarget(target: string, config: Awaited<ReturnType<typeof load
 export default defineCommand({
   meta: {
     name: "sync",
-    description: "Sync Claude Code config (~/.claude/) to OpenCode, Codex, Pi, Droid, Cursor, or Gemini",
+    description: "Sync Claude Code config (~/.claude/) to OpenCode, Codex, Pi, Droid, Copilot, or Gemini",
   },
   args: {
     target: {
       type: "string",
-      required: true,
-      description: "Target: opencode | codex | pi | droid | cursor | gemini | all",
+      default: "all",
+      description: "Target: opencode | codex | pi | droid | copilot | gemini | all (default: all)",
     },
     claudeHome: {
       type: "string",
