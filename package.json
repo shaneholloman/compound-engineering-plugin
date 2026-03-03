@@ -14,13 +14,15 @@
     "convert": "bun run src/index.ts convert",
     "list": "bun run src/index.ts list",
     "cli:install": "bun run src/index.ts install",
-    "test": "bun test"
+    "test": "bun test",
+    "release:dry-run": "semantic-release --dry-run"
   },
   "dependencies": {
     "citty": "^0.1.6",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
-    "bun-types": "^1.0.0"
+    "bun-types": "^1.0.0",
+    "semantic-release": "^25.0.3"
   }
 }
