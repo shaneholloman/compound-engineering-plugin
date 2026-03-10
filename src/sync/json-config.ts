@@ -18,8 +18,8 @@ export async function mergeJsonConfigAtKey(options: {
   const merged = {
     ...existing,
     [key]: {
-      ...existingEntries,
       ...incoming,
+      ...existingEntries, // existing user entries win on conflict
     },
   }
 
