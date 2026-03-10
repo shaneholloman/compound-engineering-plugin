@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Release numbering now follows the repository `v*` tag line. Starting at `v2.34.0`, the root CLI package and this changelog stay on that shared version stream. Older entries below retain the previous `0.x` CLI numbering.
 
+# [2.35.0](https://github.com/EveryInc/compound-engineering-plugin/compare/v2.34.7...v2.35.0) (2026-03-10)
+
+
+### Bug Fixes
+
+* **test-browser:** detect dev server port from project config ([94aedd5](https://github.com/EveryInc/compound-engineering-plugin/commit/94aedd5a7b6da4ce48de994b5a137953c0fd21c3)), closes [#164](https://github.com/EveryInc/compound-engineering-plugin/issues/164)
+
+
+### Features
+
+* **compound:** add context budget precheck and compact-safe mode ([7266062](https://github.com/EveryInc/compound-engineering-plugin/commit/726606286873c4059261a8c5f1b75c20fe11ac77)), closes [#198](https://github.com/EveryInc/compound-engineering-plugin/issues/198)
+* **plan:** add daily sequence number to plan filenames ([4fc6ddc](https://github.com/EveryInc/compound-engineering-plugin/commit/4fc6ddc5db3e2b4b398c0ffa0c156e1177b35d05)), closes [#135](https://github.com/EveryInc/compound-engineering-plugin/issues/135)
+
 ## [2.34.7](https://github.com/EveryInc/compound-engineering-plugin/compare/v2.34.6...v2.34.7) (2026-03-10)
 
 
