@@ -170,15 +170,18 @@ Run these agents in parallel:
 
 - Task compound-engineering:research:repo-research-analyst(Scope: technology, architecture, patterns. {planning context summary})
 - Task compound-engineering:research:learnings-researcher(planning context summary)
-- (conditional) Task compound-engineering:research:slack-researcher({planning context summary}. If the origin document contains a Slack context section, include it verbatim so the researcher can focus on gaps rather than re-searching.) — if any `slack_*` tool is available in the tool list. If the agent returns an error or reports Slack MCP unavailable, log a warning ("Slack context unavailable: {reason}. Proceeding without organizational context.") and continue.
-
 Collect:
 - Technology stack and versions (used in section 1.2 to make sharper external research decisions)
 - Architectural patterns and conventions to follow
 - Implementation patterns, relevant files, modules, and tests
 - AGENTS.md guidance that materially affects the plan, with CLAUDE.md used only as compatibility fallback when present
 - Institutional learnings from `docs/solutions/`
-- Organizational context from Slack (if the slack-researcher agent ran successfully)
+
+**Slack context** (opt-in) — never auto-dispatch. Route by condition:
+
+- **Tools available + user asked**: Dispatch `compound-engineering:research:slack-researcher` with the planning context summary in parallel with other Phase 1.1 agents. If the origin document has a Slack context section, pass it verbatim so the researcher focuses on gaps. Include findings in consolidation.
+- **Tools available + user didn't ask**: Note in output: "Slack tools detected. Ask me to search Slack for organizational context at any point, or include it in your next prompt."
+- **No tools + user asked**: Note in output: "Slack context was requested but no Slack tools are available. Install and authenticate the Slack plugin to enable organizational context search."
 
 #### 1.1b Detect Execution Posture Signals
 
