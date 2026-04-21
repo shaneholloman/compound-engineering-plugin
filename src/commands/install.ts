@@ -68,6 +68,12 @@ export default defineCommand({
       default: true,
       description: "Infer agent temperature from name/description",
     },
+    includeSkills: {
+      type: "boolean",
+      default: false,
+      alias: "include-skills",
+      description: "For --to codex only: also emit skills and commands. Default is agents-only, the recommended pairing with `codex plugin install`. Set this flag for a legacy / standalone install without Codex native plugin install. Ignored by other targets.",
+    },
     branch: {
       type: "string",
       description: "Git branch to clone from (e.g. feat/new-agents)",
@@ -95,6 +101,7 @@ export default defineCommand({
         agentMode: String(args.agentMode) === "primary" ? "primary" : "subagent",
         inferTemperature: Boolean(args.inferTemperature),
         permissions: permissions as PermissionMode,
+        codexIncludeSkills: Boolean(args.includeSkills),
       }
 
       if (targetName === "all") {

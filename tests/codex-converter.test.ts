@@ -46,11 +46,59 @@ const fixturePlugin: ClaudePlugin = {
 }
 
 describe("convertClaudeToCodex", () => {
+  test("default (agents-only): emits only agent conversions, no skills or prompts or command-skills", () => {
+    const bundle = convertClaudeToCodex(fixturePlugin, {
+      agentMode: "subagent",
+      inferTemperature: false,
+      permissions: "none",
+      // codexIncludeSkills omitted -> defaults to false
+    })
+
+    // Native Codex plugin install handles skills, commands, and MCP via the
+    // .codex-plugin/plugin.json manifest. The Bun converter only fills the
+    // agent gap, so skillDirs / prompts / generatedSkills / mcpServers are
+    // all empty by default.
+    expect(bundle.skillDirs).toEqual([])
+    expect(bundle.prompts).toEqual([])
+    expect(bundle.generatedSkills).toEqual([])
+    expect(bundle.mcpServers).toBeUndefined()
+
+    // Custom agents (TOML) still land with instructions populated.
+    expect(bundle.agents).toHaveLength(1)
+    const agent = bundle.agents[0]!
+    expect(agent.name).toBe("security-reviewer")
+    expect(agent.description).toBe("Security-focused agent")
+    expect(agent.instructions).toContain("Focus on vulnerabilities.")
+    expect(agent.instructions).toContain("Threat modeling")
+  })
+
+  test("default with zero agents: emits fully empty bundle (no duplicate install possible)", () => {
+    const pluginWithNoAgents: ClaudePlugin = {
+      ...fixturePlugin,
+      agents: [],
+    }
+    const bundle = convertClaudeToCodex(pluginWithNoAgents, {
+      agentMode: "subagent",
+      inferTemperature: false,
+      permissions: "none",
+    })
+
+    expect(bundle.skillDirs).toEqual([])
+    expect(bundle.prompts).toEqual([])
+    expect(bundle.generatedSkills).toEqual([])
+    expect(bundle.agents).toEqual([])
+    expect(bundle.mcpServers).toBeUndefined()
+    // invocationTargets still populated so any future --include-skills call
+    // on the same plugin would have a consistent reference graph.
+    expect(bundle.invocationTargets).toBeDefined()
+  })
+
   test("converts commands to prompts and agents to custom agents", () => {
     const bundle = convertClaudeToCodex(fixturePlugin, {
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     expect(bundle.prompts).toHaveLength(1)
@@ -101,6 +149,7 @@ describe("convertClaudeToCodex", () => {
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     const agent = bundle.agents.find((s) => s.name === "fast-agent")
@@ -136,6 +185,7 @@ describe("convertClaudeToCodex", () => {
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     // No prompt wrappers for workflow skills — they're directly invocable as skills
@@ -173,6 +223,7 @@ describe("convertClaudeToCodex", () => {
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     expect(bundle.prompts).toHaveLength(0)
@@ -184,6 +235,7 @@ describe("convertClaudeToCodex", () => {
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     expect(bundle.mcpServers?.local?.command).toBe("echo")
@@ -235,6 +287,7 @@ Task best-practices-researcher(topic)`,
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     const commandSkill = bundle.generatedSkills.find((s) => s.name === "plan")
@@ -295,6 +348,7 @@ Task compound-engineering:review:ce-security-reviewer(code_diff)`,
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     const commandSkill = bundle.generatedSkills.find((s) => s.name === "plan")
@@ -335,6 +389,7 @@ Task compound-engineering:review:ce-security-reviewer(code_diff)`,
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     const commandSkill = bundle.generatedSkills.find((s) => s.name === "review")
@@ -370,6 +425,7 @@ Don't confuse with file paths like /tmp/output.md or /dev/null.`,
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     const commandSkill = bundle.generatedSkills.find((s) => s.name === "plan")
@@ -413,6 +469,7 @@ Don't confuse with file paths like /tmp/output.md or /dev/null.`,
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     const agent = bundle.agents.find((s) => s.name === "research-session-historian")
@@ -469,6 +526,7 @@ If planning is complete, continue with /ce-work.`,
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     const commandSkill = bundle.generatedSkills.find((s) => s.name === "review")
@@ -506,6 +564,7 @@ If planning is complete, continue with /ce-work.`,
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     // Only normal command should produce a prompt
@@ -541,6 +600,7 @@ Run \`/compound-engineering-setup\` to create a settings file.`,
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     const commandSkill = bundle.generatedSkills.find((s) => s.name === "review")
@@ -570,6 +630,7 @@ Run \`/compound-engineering-setup\` to create a settings file.`,
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     const agent = bundle.agents.find((s) => s.name === "config-reader")
@@ -597,6 +658,7 @@ Run \`/compound-engineering-setup\` to create a settings file.`,
       agentMode: "subagent",
       inferTemperature: false,
       permissions: "none",
+      codexIncludeSkills: true,
     })
 
     const description = bundle.agents[0].description

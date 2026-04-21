@@ -71,6 +71,47 @@ In Cursor Agent chat, install from the plugin marketplace:
 
 Or search for "compound engineering" in the plugin marketplace.
 
+### Codex
+
+Three steps: register the marketplace, install the agent set, then enable the plugin inside Codex.
+
+1. **Register the marketplace with Codex:**
+
+   ```bash
+   codex plugin marketplace add EveryInc/compound-engineering-plugin
+   ```
+
+2. **Install the agent set** (Codex's plugin spec doesn't register custom agents yet):
+
+   ```bash
+   bunx @every-env/compound-plugin install compound-engineering --to codex
+   ```
+
+3. **Enable the plugin inside Codex:** launch `codex`, run `/plugins`, find the **Compound Engineering** marketplace, select the **compound-engineering** plugin, and choose **Install**. Restart Codex after install completes. Codex's CLI doesn't currently have a subcommand for enabling a plugin from an added marketplace — the `/plugins` TUI is the canonical flow.
+
+All three steps are needed. The marketplace registration + TUI install handles skills; the Bun step adds the review, research, and workflow agents that skills like `ce-code-review`, `ce-plan`, and `ce-work` spawn via `Task`. Without the agent step, delegating skills will report missing agents. The Bun step defaults to agents-only so it doesn't double-register skills.
+
+> **Heads up:** once Codex's native plugin spec supports custom agents, the Bun agent step goes away — the TUI install alone will be sufficient.
+
+If you previously used the Bun-only Codex install, back up stale CE artifacts before switching (safe to re-run):
+
+```bash
+bunx @every-env/compound-plugin cleanup --target codex
+```
+
+<details>
+<summary>Standalone install without <code>codex plugin marketplace add</code></summary>
+
+If you can't use Codex's plugin marketplace for some reason, the Bun converter can emit the full bundle on its own:
+
+```bash
+bunx @every-env/compound-plugin install compound-engineering --to codex --include-skills
+```
+
+Don't combine this with the marketplace + `/plugins` install — skills will register twice. The recommended path is the three-step flow above.
+
+</details>
+
 ### GitHub Copilot CLI
 
 Inside Copilot CLI:
@@ -126,10 +167,10 @@ If you previously used the old Bun Qwen install, back up stale CE artifacts befo
 bunx @every-env/compound-plugin cleanup --target qwen
 ```
 
-### OpenCode, Codex, Pi, Gemini & Kiro (experimental)
+### OpenCode, Pi, Gemini & Kiro (experimental)
 
-This repo includes a Bun/TypeScript CLI that converts Claude Code plugins to OpenCode, Codex, Pi, Gemini CLI, and Kiro CLI.
-Use the native plugin install instructions above for Claude Code, Cursor, GitHub Copilot CLI, Factory Droid, and Qwen Code.
+This repo includes a Bun/TypeScript CLI that converts Claude Code plugins to OpenCode, Pi, Gemini CLI, and Kiro CLI.
+Use the native plugin install instructions above for Claude Code, Cursor, Codex, GitHub Copilot CLI, Factory Droid, and Qwen Code.
 
 ```bash
 # convert the compound-engineering plugin into OpenCode format

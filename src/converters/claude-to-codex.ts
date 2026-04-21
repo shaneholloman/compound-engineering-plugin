@@ -1,7 +1,7 @@
 import fs, { type Dirent } from "fs"
 import path from "path"
 import { formatFrontmatter } from "../utils/frontmatter"
-import { type ClaudeAgent, type ClaudeCommand, type ClaudePlugin, type ClaudeSkill, filterSkillsByPlatform } from "../types/claude"
+import { type ClaudeAgent, type ClaudeCommand, type ClaudePlugin, filterSkillsByPlatform } from "../types/claude"
 import type { CodexAgent, CodexBundle, CodexGeneratedSkill, CodexGeneratedSkillSidecarDir } from "../types/codex"
 import type { ClaudeToOpenCodeOptions } from "./claude-to-opencode"
 import {
@@ -16,8 +16,16 @@ const CODEX_DESCRIPTION_MAX_LENGTH = 1024
 
 export function convertClaudeToCodex(
   plugin: ClaudePlugin,
-  _options: ClaudeToCodexOptions,
+  options: ClaudeToCodexOptions,
 ): CodexBundle {
+  // Agents-only is the default for --to codex. Skills and commands are
+  // expected to install via Codex's native plugin flow (`codex plugin install`)
+  // which reads the plugin's .codex-plugin/plugin.json manifest. The Bun
+  // converter fills the one gap Codex's native spec leaves open: custom
+  // agents. Emitting skills too would double-register them — once from native
+  // install, once from this converter.
+  const includeSkills = options.codexIncludeSkills ?? false
+
   const platformSkills = filterSkillsByPlatform(plugin.skills, "codex")
   const invocableCommands = plugin.commands.filter((command) => !command.disableModelInvocation)
   const applyCompoundWorkflowModel = shouldApplyCompoundWorkflowModel(plugin)
@@ -57,10 +65,50 @@ export function convertClaudeToCodex(
     }
   }
 
+  // Agents are always converted to TOML custom agents regardless of mode —
+  // that's the whole point of --to codex. invocationTargets is populated from
+  // the full plugin so agent bodies can reference skills correctly; native
+  // install makes those skills discoverable at runtime.
   const agents = plugin.agents.map(convertAgent)
   const agentTargets = buildAgentTargets(plugin, agents)
   const invocationTargets: CodexInvocationTargets = { promptTargets, skillTargets, agentTargets }
 
+  if (!includeSkills) {
+    // Default: agents-only. Skills, prompts, command-skills, and MCP are
+    // suppressed so native plugin install is the sole source for those
+    // artifact types.
+    //
+    // Pass through current skill NAMES (not contents) so `writeCodexBundle`
+    // treats them as "current" and `cleanupLegacyAgentSkillDirs` doesn't
+    // move still-active skills under `.codex/skills/<plugin>/<name>/` into
+    // legacy-backup. Without this, re-running `install --to codex` after a
+    // native plugin install would sweep allow-listed names like `ce-plan`
+    // into backup because `currentSkills` (derived from skillDirs and
+    // generatedSkills) would be empty while the legacy allow-list still
+    // lists them.
+    // Mirror the skill-name set that full mode would emit via `skillDirs`:
+    // current skills plus the canonical rewrites of deprecated workflow
+    // aliases. Deduped via Set so the caller doesn't have to worry about
+    // overlap between `copiedSkills` names and `skillTargets` values.
+    const externallyManagedSkillNames = Array.from(new Set([
+      ...copiedSkills.map((skill) => skill.name),
+      ...deprecatedWorkflowAliases
+        .map((alias) => toCanonicalWorkflowSkillName(alias.name))
+        .filter((name): name is string => name !== null),
+    ]))
+    return {
+      pluginName: plugin.manifest.name,
+      prompts: [],
+      skillDirs: [],
+      generatedSkills: [],
+      agents,
+      invocationTargets,
+      mcpServers: undefined,
+      externallyManagedSkillNames,
+    }
+  }
+
+  // Full / legacy / standalone mode: everything goes through the converter.
   const commandSkills: CodexGeneratedSkill[] = []
   const prompts = invocableCommands.map((command) => {
     const promptName = commandPromptNames.get(command.name)!
@@ -70,13 +118,11 @@ export function convertClaudeToCodex(
     return { name: promptName, content }
   })
 
-  const generatedSkills = [...commandSkills]
-
   return {
     pluginName: plugin.manifest.name,
     prompts,
     skillDirs,
-    generatedSkills,
+    generatedSkills: [...commandSkills],
     agents,
     invocationTargets,
     mcpServers: plugin.mcpServers,

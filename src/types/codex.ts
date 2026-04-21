@@ -37,4 +37,13 @@ export type CodexBundle = {
   agents?: CodexAgent[]
   invocationTargets?: CodexInvocationTargets
   mcpServers?: Record<string, ClaudeMcpServer>
+  /**
+   * Names of skills CE owns in the Codex managed tree that are NOT written by
+   * this bundle. Used in agents-only installs (default `--to codex`) where
+   * skill contents are installed via Codex's native plugin flow, but cleanup
+   * still needs to recognize those skill names as "current" (and therefore
+   * not legacy) when re-running the install. Entries are sanitized skill
+   * names (same shape as `skillDirs[].name` after `sanitizePathName`).
+   */
+  externallyManagedSkillNames?: string[]
 }

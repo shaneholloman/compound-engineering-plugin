@@ -21,6 +21,24 @@ export type ClaudeToOpenCodeOptions = {
   agentMode: "primary" | "subagent"
   inferTemperature: boolean
   permissions: PermissionMode
+  /**
+   * Codex-only option. Ignored by other targets.
+   *
+   * When false (default), `convertClaudeToCodex` emits only agent conversions.
+   * Skills and commands are expected to install via Codex's native plugin flow
+   * (`codex plugin install`), which the Bun converter complements rather than
+   * duplicates. Without this setting, running both native install and the Bun
+   * converter registers skills twice — once from the native plugin manifest,
+   * once from the converter output — creating conflicts.
+   *
+   * When true, the converter emits skills (copied as-is), commands (as prompts
+   * and generated skills), and agents together. Use when installing without
+   * Codex native plugin install (legacy / standalone flow).
+   *
+   * Obsolete once Codex's native plugin spec supports custom agents; at that
+   * point the entire `--to codex` converter path is expected to be deprecated.
+   */
+  codexIncludeSkills?: boolean
 }
 
 const TOOL_MAP: Record<string, string> = {

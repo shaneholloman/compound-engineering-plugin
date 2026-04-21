@@ -1088,6 +1088,7 @@ describe("CLI", () => {
       "compound-engineering",
       "--to",
       "codex",
+      "--include-skills",
     ], {
       cwd: workspaceRoot,
       stdout: "pipe",
@@ -1111,6 +1112,50 @@ describe("CLI", () => {
     expect(stdout).toContain(codexRoot)
     expect(await exists(path.join(codexRoot, "skills", "compound-engineering", "ce-plan", "SKILL.md"))).toBe(true)
     expect(await exists(path.join(tempRoot, ".agents", "skills", "ce-plan"))).toBe(false)
+    expect(await exists(path.join(codexRoot, "AGENTS.md"))).toBe(true)
+  })
+
+  test("install --to codex default is agents-only (skills handled by native plugin install)", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "cli-codex-agents-only-"))
+    const workspaceRoot = await fs.mkdtemp(path.join(os.tmpdir(), "cli-codex-agents-only-ws-"))
+    const projectRoot = path.join(import.meta.dir, "..")
+    const codexRoot = path.join(tempRoot, ".codex")
+
+    const proc = Bun.spawn([
+      "bun",
+      "run",
+      path.join(projectRoot, "src", "index.ts"),
+      "install",
+      "compound-engineering",
+      "--to",
+      "codex",
+    ], {
+      cwd: workspaceRoot,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: {
+        ...process.env,
+        HOME: tempRoot,
+        COMPOUND_PLUGIN_GITHUB_SOURCE: "/definitely-not-a-valid-plugin-source",
+      },
+    })
+
+    const exitCode = await proc.exited
+    const stdout = await new Response(proc.stdout).text()
+    const stderr = await new Response(proc.stderr).text()
+
+    if (exitCode !== 0) {
+      throw new Error(`CLI failed (exit ${exitCode}).\nstdout: ${stdout}\nstderr: ${stderr}`)
+    }
+
+    expect(stdout).toContain("Installed compound-engineering")
+    // Default omits skills; they're expected from `codex plugin install`.
+    expect(await exists(path.join(codexRoot, "skills", "ce-plan", "SKILL.md"))).toBe(false)
+    // Agents still land (as generated skills for now — Codex's native plugin
+    // spec does not register custom agents, so the Bun converter fills the gap).
+    expect(await exists(path.join(codexRoot, "skills"))).toBe(true)
+    // AGENTS.md is emitted because --to codex always ensures a root AGENTS.md
+    // exists for Codex's discovery chain.
     expect(await exists(path.join(codexRoot, "AGENTS.md"))).toBe(true)
   })
 
@@ -1285,6 +1330,7 @@ describe("CLI", () => {
       "codex",
       "--codex-home",
       codexRoot,
+      "--include-skills",
     ], {
       cwd: path.join(import.meta.dir, ".."),
       stdout: "pipe",
@@ -1326,6 +1372,7 @@ describe("CLI", () => {
       codexRoot,
       "--output",
       tempRoot,
+      "--include-skills",
     ], {
       cwd: path.join(import.meta.dir, ".."),
       stdout: "pipe",
@@ -1805,7 +1852,11 @@ describe("CLI", () => {
     expect(stdout).not.toContain("cursor")
 
     expect(await exists(path.join(tempHome, ".config", "opencode", "opencode.json"))).toBe(true)
-    expect(await exists(path.join(tempHome, ".codex", "skills", "compound-engineering", "skill-one", "SKILL.md"))).toBe(true)
+    // Codex `--to all` install uses the agents-only default — skills come from
+    // `codex plugin install`, not the Bun converter. Verify agents landed
+    // (the gap the converter fills) rather than skills (which the default suppresses).
+    expect(await exists(path.join(tempHome, ".codex", "agents", "compound-engineering", "security-sentinel.toml"))).toBe(true)
+    expect(await exists(path.join(tempHome, ".codex", "skills", "compound-engineering", "skill-one", "SKILL.md"))).toBe(false)
     expect(await exists(path.join(tempHome, ".pi", "agent", "skills", "skill-one", "SKILL.md"))).toBe(true)
     expect(await exists(path.join(tempCwd, ".gemini", "skills", "skill-one", "SKILL.md"))).toBe(true)
     expect(await exists(path.join(tempCwd, ".kiro", "skills", "skill-one", "SKILL.md"))).toBe(true)
