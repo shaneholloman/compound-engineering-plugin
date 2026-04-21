@@ -200,13 +200,6 @@ If relevant, call out whether the choice is:
 Write or update a requirements document only when the conversation produced durable decisions worth preserving. Read `references/requirements-capture.md` for the document template, formatting rules, visual aid guidance, and completeness checks.
 
 For **Lightweight** brainstorms, keep the document compact. Skip document creation when the user only needs brief alignment and no durable decisions need to be preserved.
-### Phase 3.5: Document Review
-
-When a requirements document was created or updated, run the `ce-doc-review` skill on it before presenting handoff options. Pass the document path as the argument.
-
-If document-review returns findings that were auto-applied, note them briefly when presenting handoff options. If residual P0/P1 findings were surfaced, mention them so the user can decide whether to address them before proceeding.
-
-When document-review returns "Review complete", proceed to Phase 4.
 
 ### Phase 4: Handoff
 
