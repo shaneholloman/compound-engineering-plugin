@@ -51,7 +51,7 @@ When invoking any skill referenced below, resolve its name against the available
 
    Never block DONE on tracker filing failures once residuals have been durably recorded. A `no_sink` outcome is success only when the findings are present in the PR body or in the pushed fallback file.
 
-6. Invoke the `ce-test-browser` skill.
+6. Invoke the `ce-test-browser` skill with `mode:pipeline`.
 
 7. Invoke the `ce-commit-push-pr` skill.
 

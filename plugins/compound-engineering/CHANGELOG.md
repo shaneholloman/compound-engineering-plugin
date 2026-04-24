@@ -9,6 +9,12 @@ All notable changes to the compound-engineering plugin will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.6] - 2026-04-24
+
+### Changed
+- **ce-test-browser:** port scan and server auto-start now only happen in pipeline mode (`mode:pipeline` / `PIPELINE_MODE=1`); manual invocations use the preferred port as-is and ask the user to start their own server
+- **lfg:** step 6 now passes `mode:pipeline` to `ce-test-browser` so parallel LFG runs claim non-colliding ports automatically
+
 ## [3.0.5] - 2026-04-24
 
 ### Changed
